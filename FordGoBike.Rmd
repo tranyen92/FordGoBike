@@ -1,0 +1,111 @@
+---
+title: "Ford GoBike Flexdashboard"
+author: "Yen Tran"
+output: 
+  flexdashboard::flex_dashboard:
+    orientation: columns
+    vertical_layout: fill
+---
+
+```{r setup, include=FALSE}
+library(flexdashboard)
+library(readr)
+library(tidyverse)
+library(leaflet)
+library(dygraphs)
+library(xts)
+
+fordgobike2017 <- read_csv(file="./data/2017-fordgobike-tripdata.csv")
+fordgobike201801 <- read_csv(file="./data/201801-fordgobike-tripdata.csv")
+fordgobike201802 <- read_csv(file="./data/201802-fordgobike-tripdata.csv")
+fordgobike201803 <- read_csv(file="./data/201803-fordgobike-tripdata.csv")
+fordgobike201804 <- read_csv(file="./data/201804-fordgobike-tripdata.csv")
+fordgobike201805 <- read_csv(file="./data/201805-fordgobike-tripdata.csv")
+fordgobike201806 <- read_csv(file="./data/201806-fordgobike-tripdata.csv")
+fordgobike201807 <- read_csv(file="./data/201807-fordgobike-tripdata.csv")
+fordgobike201808 <- read_csv(file="./data/201808-fordgobike-tripdata.csv")
+fordgobike201809 <- read_csv(file="./data/201809-fordgobike-tripdata.csv")
+fordgobike201810 <- read_csv(file="./data/201810-fordgobike-tripdata.csv")
+
+fordgobike201806 <- fordgobike201806 %>%
+        mutate(start_station_id = as.integer(start_station_id),
+               end_station_id= as.integer(start_station_id) )
+
+fordgobike201807 <- fordgobike201807 %>%
+        mutate(start_station_id = as.integer(start_station_id),
+               end_station_id= as.integer(start_station_id) )
+
+fordgobike201808 <- fordgobike201808 %>%
+        mutate(start_station_id = as.integer(start_station_id),
+               end_station_id= as.integer(start_station_id) )
+fordgobike201809 <- fordgobike201809 %>%
+        mutate(start_station_id = as.integer(start_station_id),
+               end_station_id= as.integer(start_station_id) )
+fordgobike201810 <- fordgobike201810 %>%
+        mutate(start_station_id = as.integer(start_station_id),
+               end_station_id= as.integer(start_station_id) )
+
+fordgobike2018 <- bind_rows(fordgobike201801, fordgobike201802, fordgobike201803, fordgobike201804, fordgobike201805, fordgobike201806, fordgobike201807, fordgobike201808, fordgobike201809, fordgobike201810)
+
+fordgobike <- bind_rows(fordgobike2017, fordgobike2018)
+```
+
+Column {data-width=650}
+-----------------------------------------------------------------------
+
+### Chart A - Time Series Plot 
+
+```{r}
+fordgobike_cleaned <- fordgobike %>% 
+  separate(start_time, c("date", "time"), sep = " ") %>% 
+  mutate(date = as.Date(date)) %>%
+  filter(!is.na(start_station_id)) %>%
+  group_by(date) %>%
+  summarise(count = n())
+
+w <- fordgobike_cleaned %>% select(date, count) %>% mutate(date = as.Date(date)) 
+
+mydata <- xts(w[-1],w$date)
+
+dygraph(mydata, main = "Ford GoBike - Numbers of rides per day in the Bay Area", ylab = "Numbers of rides (per day)") %>% dyRangeSelector()
+```
+
+Column {data-width=350}
+-----------------------------------------------------------------------
+
+### Chart B - Stations' Map in 2017
+
+```{r}
+fordgobike2017 <- na.omit(fordgobike2017)
+
+sum_17 <- fordgobike2017 %>%
+  rename(longitude = start_station_longitude, latitude = start_station_latitude) %>%
+  select(start_station_id, start_station_name, latitude, longitude) %>%
+  group_by(start_station_id, start_station_name, latitude, longitude) %>%
+  summarise(count = n()) 
+
+leaflet(sum_17) %>% addTiles() %>% addMarkers(
+  clusterOptions = markerClusterOptions(),
+  popup = paste("Station ID:", sum_17$start_station_id, "<br>",
+              "Station Name:", sum_17$start_station_name, "<br>",
+              "Number of rides:", sum_17$count))
+```
+
+### Chart C - Stations' Map in 2018
+
+```{r}
+fordgobike2018 <- na.omit(fordgobike2018)
+
+sum_18 <- fordgobike2018 %>%
+  rename(longitude = start_station_longitude, latitude = start_station_latitude) %>%
+  select(start_station_id, start_station_name, latitude, longitude) %>%
+  group_by(start_station_id, start_station_name, latitude, longitude) %>%
+  summarise(count = n()) 
+
+leaflet(sum_18) %>% addTiles() %>% addMarkers(
+  clusterOptions = markerClusterOptions(),
+  popup = paste("Station ID:", sum_18$start_station_id, "<br>",
+              "Station Name:", sum_18$start_station_name, "<br>",
+              "Number of rides:", sum_18$count))
+```
+
